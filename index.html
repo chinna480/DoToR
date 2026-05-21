@@ -38,10 +38,16 @@
   <script src="js/screens/customer-profile.js"></script>
   <script src="js/screens/tech-profile.js"></script>
 
-  <!-- Initialize the app -->
-  <script>Router.navigate('splash');</script>
 </head>
 <body>
   <div id="app"></div>
+
+  <!-- Initialize the app -->
+  <script>
+    Router.navigate('splash').catch(function(e) {
+      console.error('App init error:', e);
+      document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>Something went wrong</h2><p style="color:#888">' + e.message + '</p><button onclick="location.reload()" style="padding:10px 30px;background:#FF6B00;color:white;border:none;border-radius:10px;margin-top:20px;cursor:pointer">Retry</button></div>';
+    });
+  </script>
 </body>
 </html>

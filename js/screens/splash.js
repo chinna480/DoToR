@@ -12,7 +12,11 @@ Router.register('splash', {
         </div>
       `,
       init() {
-        const timer = setTimeout(() => Router.navigate('role'), 3000);
+        const timer = setTimeout(() => {
+          Router.navigate('role').catch(function(e) {
+            console.warn('Splash navigate error:', e);
+          });
+        }, 3000);
         return () => clearTimeout(timer);
       }
     };

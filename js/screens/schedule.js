@@ -89,6 +89,7 @@ Router.register('schedule', {
         window.bookAppointment = () => {
           if (!selectedDate || !selectedSlot) return;
           const custLocation = Store.get('custLocation', '');
+          const custPincode = Store.get('custPincode', '');
           const appointment = {
             customerName: custName,
             customerPhone: custPhone,
@@ -96,6 +97,8 @@ Router.register('schedule', {
             dateLabel: `${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}`,
             timeSlot: selectedSlot,
             status: 'scheduled',
+            location: custLocation,
+            pincode: custPincode,
             createdAt: Date.now(),
           };
           firebase.database().ref('appointments').push(appointment).then(ref => {
@@ -105,6 +108,7 @@ Router.register('schedule', {
               customerName: custName,
               customerPhone: custPhone,
               location: custLocation,
+              pincode: custPincode,
               brand: 'Scheduled',
               repair: 'Appointment: ' + selectedSlot,
               status: 'scheduled',

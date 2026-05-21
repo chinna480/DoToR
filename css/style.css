@@ -1460,7 +1460,7 @@ html, body {
 
 /* ─── Bottom Navigation Bar ─── */
 :root {
-  --nav-h: 0px;
+  --nav-h: 65px;
 }
 
 .bottom-nav {
@@ -1535,13 +1535,13 @@ html, body {
   border-radius: 0 0 3px 3px;
 }
 
-/* ─── Nav-visible Adjustments ─── */
-#app.nav-visible {
+/* ─── App padding for nav bar (always applied) ─── */
+#app {
   padding-bottom: var(--nav-h);
 }
 
-/* ─── Adjust Chat for Bottom Nav ─── */
-.chat-container.nav-visible {
+/* ─── Adjust Chat for Bottom Nav (always applied) ─── */
+.chat-container {
   height: calc(100vh - var(--nav-h));
 }
 

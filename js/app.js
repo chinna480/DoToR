@@ -180,6 +180,7 @@ const NavBar = {
   _customerTabs: [
     { id: 'home', label: 'Home', icon: '🏠', screen: 'home' },
     { id: 'schedule', label: 'Schedule', icon: '📅', screen: 'schedule' },
+    { id: 'download', label: 'App', icon: '📲', screen: null, action: 'download' },
     { id: 'track', label: 'Track', icon: '🛵', screen: 'tracking' },
     { id: 'chat', label: 'Chat', icon: '💬', screen: 'chat' },
     { id: 'profile', label: 'Profile', icon: '👤', screen: 'customer-profile' },
@@ -187,6 +188,7 @@ const NavBar = {
   _techTabs: [
     { id: 'home', label: 'Home', icon: '🏠', screen: 'tech-home' },
     { id: 'jobs', label: 'Jobs', icon: '📋', screen: 'tech-home' },
+    { id: 'download', label: 'App', icon: '📲', screen: null, action: 'download' },
     { id: 'track', label: 'Track', icon: '🛵', screen: 'tracking' },
     { id: 'chat', label: 'Chat', icon: '💬', screen: 'chat' },
     { id: 'profile', label: 'Profile', icon: '👤', screen: 'tech-profile' },
@@ -235,7 +237,9 @@ const NavBar = {
     const tab = this.tabs.find(t => t.id === tabId);
     if (!tab) return;
 
-    if (tab.id === 'chat') {
+    if (tab.action === 'download') {
+      window.downloadApp();
+    } else if (tab.id === 'chat') {
       const isTech = this.role === 'tech';
       const orderId = isTech ? Store.get('currentOrderId', Store.get('lastOrderId', '')) : Store.get('lastOrderId', '');
       const myName = Store.get(isTech ? 'techName' : 'custName', 'User');
@@ -253,6 +257,27 @@ const NavBar = {
       });
     }
   }
+};
+
+// ─── Download App Banner ─────────────────────────────────────
+window.downloadApp = () => {
+  // Show download options - open app store or display info
+  showAlert('📱 Download DoToR App',
+    'Get the full experience on your phone!\n\n• Faster booking\n• Live technician tracking\n• Real-time chat\n• Instant notifications',
+    [
+      { text: 'Google Play', onPress: () => window.open('https://play.google.com/store/apps/details?id=com.dotor.app', '_blank') },
+      { text: 'App Store', onPress: () => window.open('https://apps.apple.com/app/dotor/id123456789', '_blank') },
+      { text: 'Later' }
+    ]
+  );
+};
+
+window.dismissDownloadBanner = () => {
+  const banner = document.getElementById('downloadBanner');
+  if (banner) {
+    banner.classList.add('hidden');
+  }
+  Store.set('dismissedDownloadBanner', true);
 };
 
 // ─── Hash-based Routing ───────────────────────────────────────

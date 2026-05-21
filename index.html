@@ -40,6 +40,24 @@
 
 </head>
 <body>
+  <!-- Download App Banner -->
+  <div id="downloadBanner" class="download-banner">
+    <div class="download-banner-content" onclick="window.downloadApp()">
+      <span class="download-banner-icon">📱</span>
+      <div class="download-banner-text">
+        <div class="download-banner-title">Get the DoToR App</div>
+        <div class="download-banner-sub">Faster booking &amp; live tracking</div>
+      </div>
+      <button class="download-banner-btn" onclick="event.stopPropagation();window.downloadApp()">Download</button>
+    </div>
+    <button class="download-banner-close" onclick="event.stopPropagation();window.dismissDownloadBanner()" aria-label="Close">✕</button>
+  </div>
+  <script>
+    // Check dismissed state immediately after banner is in DOM
+    if (Store && Store.get('dismissedDownloadBanner', false)) {
+      document.getElementById('downloadBanner').classList.add('hidden');
+    }
+  </script>
   <div id="app"></div>
 
   <!-- Bottom Navigation Bar -->

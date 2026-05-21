@@ -27,7 +27,7 @@ Router.register('tech-home', {
             <div class="earn-card"><div class="earn-label">Pending</div><div class="earn-value" id="pendingCount">0</div></div>
             <div class="earn-card"><div class="earn-label">Status</div><div class="earn-value earn-value-sm" id="techStatus">🟢 Active</div></div>
           </div>
-          <div class="section-title">📋 Pending Jobs</div>
+          <div class="section-title">📋 Pending Jobs <span style="font-size:12px;font-weight:400;color:var(--gray)" id="areaTag"></span></div>
           <div id="pendingJobs">
             <div class="empty-card"><span class="empty-text">No new jobs right now</span></div>
           </div>
@@ -50,6 +50,14 @@ Router.register('tech-home', {
         let prevPendingIds = new Set();
         let map = null, custMarker = null, myMarker = null, polyline = null;
         let techPushToken = Store.get('pushToken', '');
+
+        const techArea = Store.get('techLocation', '').toLowerCase().trim();
+
+        function matchesLocation(orderLocation) {
+          if (!techArea) return true; // No tech location set - show all
+          if (!orderLocation) return false;
+          return orderLocation.toLowerCase().trim() === techArea;
+        }
 
         function renderPending(pending) {
           const el = document.getElementById('pendingJobs');
@@ -164,6 +172,13 @@ Router.register('tech-home', {
           `).join('');
         }
 
+        // Show area filter tag
+        const myArea = Store.get('techLocation', '');
+        const areaTag = document.getElementById('areaTag');
+        if (areaTag && myArea) {
+          areaTag.textContent = '📍 ' + myArea;
+        }
+
         // Listen for orders
         const ordersRef = firebase.database().ref('orders');
         const onOrders = (snap) => {
@@ -172,7 +187,9 @@ Router.register('tech-home', {
 
           snap.forEach(child => {
             const order = { id: child.key, ...child.val() };
-            if (order.status === 'pending') pending.push(order);
+            if (order.status === 'pending' && matchesLocation(order.location)) {
+              pending.push(order);
+            }
             if (order.status === 'accepted') ongoing = order;
             if (order.status === 'completed') { completed.push(order); count++; }
           });

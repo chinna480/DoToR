@@ -103,7 +103,8 @@ Router.register('schedule', {
           };
           firebase.database().ref('appointments').push(appointment).then(ref => {
             Store.set('lastAppointmentId', ref.key);
-            // Also create an order
+            // Also create an order (tech will see this in their Scheduled Appointments)
+            const dateLabel = `${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}`;
             firebase.database().ref('orders').push({
               customerName: custName,
               customerPhone: custPhone,
@@ -113,6 +114,7 @@ Router.register('schedule', {
               repair: 'Appointment: ' + selectedSlot,
               status: 'scheduled',
               time: selectedSlot,
+              dateLabel: dateLabel,
               isAppointment: true,
             });
             showAlert('✅ Appointment Booked!',

@@ -31,6 +31,10 @@ Router.register('tech-home', {
           <div id="pendingJobs">
             <div class="empty-card"><span class="empty-text">No new jobs right now</span></div>
           </div>
+          <div class="section-title">📅 Scheduled Appointments <span style="font-size:12px;font-weight:400;color:var(--gray)" id="scheduledCount"></span></div>
+          <div id="scheduledAppointments">
+            <div class="empty-card"><span class="empty-text">No scheduled appointments</span></div>
+          </div>
           <div class="section-title">🔧 Ongoing Job</div>
           <div id="ongoingJob">
             <div class="empty-card"><span class="empty-text">No ongoing job right now</span></div>
@@ -168,6 +172,30 @@ Router.register('tech-home', {
           }
         }
 
+        function renderScheduled(scheduled) {
+          const el = document.getElementById('scheduledAppointments');
+          const countEl = document.getElementById('scheduledCount');
+          if (scheduled.length === 0) {
+            el.innerHTML = '<div class="empty-card"><span class="empty-text">No scheduled appointments</span></div>';
+            if (countEl) countEl.textContent = '';
+            return;
+          }
+          if (countEl) countEl.textContent = `(${scheduled.length})`;
+          el.innerHTML = scheduled.map(o => `
+            <div class="job-card pending" style="border-left-color:var(--dark)">
+              <div class="job-new-badge" style="background:var(--dark)">📅 Appointment</div>
+              <div class="job-customer">👤 ${o.customerName}</div>
+              <div class="job-type" style="color:var(--dark)">📅 ${o.dateLabel || 'Scheduled'}</div>
+              <div class="job-type">🕐 ${o.time || o.repair?.replace('Appointment: ', '') || '--'}</div>
+              <div class="job-location">📍 ${o.location}</div>
+              <div class="job-actions">
+                <button class="btn btn-sm btn-danger" onclick="window.rejectAppointment('${o.id}')" style="flex:1">✕ Reject</button>
+                <button class="btn btn-sm btn-primary" onclick="window.acceptAppointment('${o.id}')" style="flex:1">✓ Accept</button>
+              </div>
+            </div>
+          `).join('');
+        }
+
         function renderCompleted(completed) {
           const el = document.getElementById('completedJobs');
           if (completed.length === 0) {
@@ -202,11 +230,14 @@ Router.register('tech-home', {
         // Listen for orders
         const ordersRef = firebase.database().ref('orders');
         const onOrders = (snap) => {
-          const pending = [], completed = [];
+          const pending = [], scheduled = [], completed = [];
           let ongoing = null, count = 0;
 
           snap.forEach(child => {
             const order = { id: child.key, ...child.val() };
+            if (order.status === 'scheduled' && order.isAppointment && matchesLocation(order)) {
+              scheduled.push(order);
+            }
             if (order.status === 'pending' && matchesLocation(order)) {
               pending.push(order);
             }
@@ -224,6 +255,7 @@ Router.register('tech-home', {
 
           document.getElementById('totalJobs').textContent = count;
           renderPending(pending);
+          renderScheduled(scheduled);
           renderCompleted(completed);
 
           if (ongoing && (!ongoingOrder || ongoingOrder.id !== ongoing.id)) {
@@ -283,6 +315,24 @@ Router.register('tech-home', {
 
         window.rejectJob = (orderId) => {
           showAlert('Reject Job?', 'Are you sure?', [
+            { text: 'Cancel' },
+            { text: 'Reject', style: 'destructive', onPress: () => firebase.database().ref('orders/' + orderId).update({ status: 'rejected' }) }
+          ]);
+        };
+
+        window.acceptAppointment = (orderId) => {
+          const name = Store.get('techName', 'Technician');
+          const loc = Store.get('techLocation', '');
+          const phone = Store.get('techPhone', '');
+          Store.set('currentOrderId', orderId);
+          firebase.database().ref('techInfo').set({ name, location: loc, phone });
+          firebase.database().ref('orders/' + orderId).update({ status: 'accepted', brand: 'Appointment', techPhone: phone })
+            .then(() => showAlert('✅ Appointment Accepted!', 'Customer will be notified.\n\nStart heading to their location!'))
+            .catch(() => showAlert('Error', 'Failed to accept. Try again!'));
+        };
+
+        window.rejectAppointment = (orderId) => {
+          showAlert('Reject Appointment?', 'Are you sure?', [
             { text: 'Cancel' },
             { text: 'Reject', style: 'destructive', onPress: () => firebase.database().ref('orders/' + orderId).update({ status: 'rejected' }) }
           ]);
@@ -358,6 +408,8 @@ Router.register('tech-home', {
           if (map) { map.remove(); window._currentMap = null; }
           delete window.acceptJob;
           delete window.rejectJob;
+          delete window.acceptAppointment;
+          delete window.rejectAppointment;
           delete window.completeJob;
           delete window.navigateToCustomer;
           delete window.callCustomer;

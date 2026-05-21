@@ -182,6 +182,10 @@ window.addEventListener('hashchange', () => {
     if (qs) {
       qs.split('&').forEach(p => { const [k, v] = p.split('='); params[k] = decodeURIComponent(v); });
     }
-    if (Router.currentScreen !== screen) Router.navigate(screen, params);
+    if (Router.currentScreen !== screen) {
+      Router.navigate(screen, params).catch(function(e) {
+        console.warn('Hashchange navigate error:', e);
+      });
+    }
   }
 });

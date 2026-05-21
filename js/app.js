@@ -191,7 +191,6 @@ const NavBar = {
     { id: 'chat', label: 'Chat', icon: '💬', screen: 'chat' },
     { id: 'profile', label: 'Profile', icon: '👤', screen: 'tech-profile' },
   ],
-  _screensWithNav: ['home', 'schedule', 'tracking', 'customer-profile', 'tech-home', 'tech-profile', 'chat'],
   visible: false,
 
   get role() {
@@ -206,24 +205,10 @@ const NavBar = {
     const nav = document.getElementById('bottomNav');
     if (!nav) return;
 
-    if (this._screensWithNav.includes(screen)) {
-      this.render(screen);
-      nav.style.display = 'block';
-      this.visible = true;
-      document.documentElement.style.setProperty('--nav-h', '65px');
-      document.getElementById('app').classList.add('nav-visible');
-      // Also update chat container if present
-      const chatContainer = document.querySelector('.chat-container');
-      if (chatContainer) chatContainer.classList.add('nav-visible');
-    } else {
-      // Reset nav properties when hiding
-      nav.style.display = 'none';
-      this.visible = false;
-      document.documentElement.style.setProperty('--nav-h', '0px');
-      document.getElementById('app').classList.remove('nav-visible');
-      const chatContainer = document.querySelector('.chat-container');
-      if (chatContainer) chatContainer.classList.remove('nav-visible');
-    }
+    // Always render and show the nav bar on every screen
+    this.render(screen);
+    nav.style.display = 'block';
+    this.visible = true;
   },
 
   render(activeScreen) {

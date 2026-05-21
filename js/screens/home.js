@@ -114,6 +114,7 @@ Router.register('home', {
           const loc = Store.get('custLocation', 'Your Location');
           const phone = Store.get('custPhone', '');
           const pushToken = Store.get('pushToken', '');
+          const pincode = Store.get('custPincode', '');
           Store.set('lastBrand', selectedBrand);
           Store.set('lastRepair', repair);
 
@@ -126,6 +127,7 @@ Router.register('home', {
             customerPhone: phone,
             customerPushToken: pushToken,
             location: loc,
+            pincode: pincode,
             brand: selectedBrand,
             repair: repair,
             status: 'pending',

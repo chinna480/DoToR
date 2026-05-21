@@ -52,11 +52,27 @@ Router.register('tech-home', {
         let techPushToken = Store.get('pushToken', '');
 
         const techArea = Store.get('techLocation', '').toLowerCase().trim();
+        const techPincode = Store.get('techPincode', '').trim();
 
-        function matchesLocation(orderLocation) {
-          if (!techArea) return true; // No tech location set - show all
-          if (!orderLocation) return false;
-          return orderLocation.toLowerCase().trim() === techArea;
+        function matchesLocation(order) {
+          // If tech has no location set, show all orders
+          if (!techArea && !techPincode) return true;
+
+          const orderPincode = (order.pincode || '').trim();
+          const orderArea = (order.location || '').toLowerCase().trim();
+
+          // If tech has both area and pincode, both must match
+          if (techArea && techPincode) {
+            return orderArea === techArea && orderPincode === techPincode;
+          }
+
+          // If tech has only pincode, match by pincode
+          if (techPincode) {
+            return orderPincode === techPincode;
+          }
+
+          // If tech has only area, match by area (backward compat)
+          return orderArea === techArea;
         }
 
         function renderPending(pending) {
@@ -172,11 +188,15 @@ Router.register('tech-home', {
           `).join('');
         }
 
-        // Show area filter tag
+        // Show area/pincode filter tag
         const myArea = Store.get('techLocation', '');
+        const myPincode = Store.get('techPincode', '');
         const areaTag = document.getElementById('areaTag');
-        if (areaTag && myArea) {
-          areaTag.textContent = '📍 ' + myArea;
+        if (areaTag) {
+          const tagParts = [];
+          if (myArea) tagParts.push('📍 ' + myArea);
+          if (myPincode) tagParts.push('📮 ' + myPincode);
+          areaTag.textContent = tagParts.length ? tagParts.join(' · ') : '';
         }
 
         // Listen for orders
@@ -187,7 +207,7 @@ Router.register('tech-home', {
 
           snap.forEach(child => {
             const order = { id: child.key, ...child.val() };
-            if (order.status === 'pending' && matchesLocation(order.location)) {
+            if (order.status === 'pending' && matchesLocation(order)) {
               pending.push(order);
             }
             if (order.status === 'accepted') ongoing = order;

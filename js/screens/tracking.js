@@ -84,7 +84,90 @@ Router.register('tracking', {
         let jobDone = false;
         const defaultLat = 17.3850, defaultLng = 78.4867;
         let custLat = defaultLat, custLng = defaultLng;
+        let techLat = null, techLng = null;
         let hasTechLocation = false;
+        let notifiedTechAssigned = false; // track if we've notified customer about tech assignment
+        let notifiedJobComplete = false; // track if we've notified customer about job completion
+        let notifiedTechNearby = false; // track if we've notified customer tech is nearby
+        let isFirstTrackingLoad = true;  // skip notifications on initial page load
+        const SPEED = 0.3; // km/min (~18 km/h — realistic city speed)
+
+        // ── Request browser notification permission ──────────────────────────────
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission().catch(() => {});
+        }
+
+        function playNotifSound(type) {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (type === 'tech-assigned') {
+              // Two ascending beeps — someone is coming!
+              const osc1 = ctx.createOscillator();
+              const g1 = ctx.createGain();
+              osc1.connect(g1); g1.connect(ctx.destination);
+              osc1.frequency.value = 660;
+              g1.gain.setValueAtTime(0.12, ctx.currentTime);
+              g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+              osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.15);
+
+              const osc2 = ctx.createOscillator();
+              const g2 = ctx.createGain();
+              osc2.connect(g2); g2.connect(ctx.destination);
+              osc2.frequency.value = 880;
+              g2.gain.setValueAtTime(0.12, ctx.currentTime + 0.2);
+              g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+              osc2.start(ctx.currentTime + 0.2); osc2.stop(ctx.currentTime + 0.35);
+            } else if (type === 'tech-nearby') {
+              // Three rapid beeps — alert!
+              for (let i = 0; i < 3; i++) {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.connect(g); g.connect(ctx.destination);
+                osc.frequency.value = 520;
+                const t = ctx.currentTime + i * 0.18;
+                g.gain.setValueAtTime(0.12, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+                osc.start(t); osc.stop(t + 0.1);
+              }
+            } else if (type === 'job-complete') {
+              // Two descending beeps — satisfying done sound
+              const osc1 = ctx.createOscillator();
+              const g1 = ctx.createGain();
+              osc1.connect(g1); g1.connect(ctx.destination);
+              osc1.frequency.value = 880;
+              g1.gain.setValueAtTime(0.12, ctx.currentTime);
+              g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+              osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.2);
+
+              const osc2 = ctx.createOscillator();
+              const g2 = ctx.createGain();
+              osc2.connect(g2); g2.connect(ctx.destination);
+              osc2.frequency.value = 660;
+              g2.gain.setValueAtTime(0.12, ctx.currentTime + 0.25);
+              g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+              osc2.start(ctx.currentTime + 0.25); osc2.stop(ctx.currentTime + 0.45);
+            }
+          } catch (e) {}
+        }
+
+        function showCustBrowserNotification(title, body, onClickUrl, tag, soundType) {
+          if (!('Notification' in window) || Notification.permission !== 'granted') return;
+          try {
+            const notif = new Notification(title, {
+              body,
+              icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔧</text></svg>',
+              tag: tag || 'cust-notification',
+              requireInteraction: true,
+            });
+            notif.onclick = () => {
+              window.focus();
+              if (onClickUrl) Router.navigate(onClickUrl);
+              notif.close();
+            };
+            // Play event-specific notification sound
+            playNotifSound(soundType || 'default');
+          } catch (e) {}
+        }
 
         // Initialize Leaflet map
         map = L.map('trackingMap').setView([defaultLat, defaultLng], 13);
@@ -103,7 +186,7 @@ Router.register('tracking', {
           custMarker.setLatLng([lat, lng]);
           firebase.database().ref('custLocation').set({ lat, lng }).catch(() => {});
           map.setView([lat, lng], map.getZoom());
-          updateDistance();
+          updateDistanceDisplay();
         });
 
         // Listen for technician location
@@ -111,6 +194,7 @@ Router.register('tracking', {
         const onTechLoc = (snap) => {
           if (!snap.exists()) return;
           const { lat, lng } = snap.val();
+          techLat = lat; techLng = lng;
           hasTechLocation = true;
           if (!techMarker) {
             techMarker = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: '🛵', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(map)
@@ -125,9 +209,7 @@ Router.register('tracking', {
           }
           document.getElementById('trackStatus').textContent = '🛵 Technician is on the way!';
           document.getElementById('techStatusText').textContent = 'On the way';
-          const d = parseFloat(calcDistance(custLat, custLng, lat, lng));
-          document.getElementById('trackDistance').textContent = d + ' km';
-          document.getElementById('trackEta').textContent = '~' + Math.round(d / 0.5) + ' mins';
+          updateDistanceDisplay();
 
           // Update map bounds
           const bounds = L.latLngBounds([custLat, custLng], [lat, lng]);
@@ -135,48 +217,88 @@ Router.register('tracking', {
 
           // Update steps
           document.getElementById('stepTechOnWay').className = 'dot dot-done';
+
+          // ── Proximity check: notify customer when tech is within 1km ──
+          if (!isFirstTrackingLoad && techNameVal !== 'Technician' && !jobDone && !notifiedTechNearby) {
+            const d = parseFloat(calcDistance(custLat, custLng, techLat, techLng));
+            if (!isNaN(d) && d <= 1.0) {
+              notifiedTechNearby = true;
+              showCustBrowserNotification(
+                '🚗 Technician Nearby!',
+                `${techNameVal} is less than 1 km from your location — almost there!`,
+                'tracking',
+                'cust-tech-nearby',
+                'tech-nearby'
+              );
+            }
+          }
         };
         techLocRef.on('value', onTechLoc);
 
-        // Listen for technician info
-        const techInfoRef = firebase.database().ref('techInfo');
-        const onTechInfo = (snap) => {
-          if (!snap.exists()) return;
-          const info = snap.val();
-          techNameVal = info.name || 'Technician';
-          techPhone = info.phone || '';
-          document.getElementById('techName').textContent = techNameVal;
-          document.getElementById('callTechBtn').textContent = '📞 Call ' + techNameVal;
-        };
-        techInfoRef.on('value', onTechInfo);
-
-        // Listen for completed orders
+        // Listen for orders — get tech info directly from this customer's order (not from shared techInfo)
         const ordersRef = firebase.database().ref('orders');
         const onOrders = (snap) => {
           if (!snap.exists()) return;
           snap.forEach(child => {
-            if (child.val().status === 'completed') {
-              jobDone = true;
-              document.getElementById('trackStatus').textContent = '✅ Repair Completed!';
-              document.getElementById('trackPill').style.background = '#2e7d32';
-              document.getElementById('trackPillText').textContent = '✅ Done';
-              document.getElementById('stepInProgress').className = 'dot dot-done';
-              document.getElementById('stepDone').className = 'dot dot-done';
-              document.getElementById('reviewBtn').style.display = 'flex';
-              if (techMarker) { map.removeLayer(techMarker); techMarker = null; }
-              if (polyline) { map.removeLayer(polyline); polyline = null; }
+            const o = child.val();
+            // Read tech name/phone from this customer's order (not from shared techInfo which gets overwritten)
+            if (child.key === orderId) {
+              if (o.techName) {
+                // First time tech is assigned (not on initial load) → show browser notification
+                if (!isFirstTrackingLoad && !notifiedTechAssigned && techNameVal !== o.techName) {
+                  notifiedTechAssigned = true;
+                  showCustBrowserNotification(
+                    '🛵 Technician Assigned!',
+                    `${o.techName} is on the way to fix your ${o.brand} ${o.repair}!`,
+                    'tracking',
+                    'cust-tech-assigned',
+                    'tech-assigned'
+                  );
+                }
+                techNameVal = o.techName;
+                techPhone = o.techPhone || '';
+                document.getElementById('techName').textContent = techNameVal;
+                document.getElementById('callTechBtn').textContent = '📞 Call ' + techNameVal;
+              }
+              if (o.status === 'completed') {
+                // Notify customer when job is marked complete (skip initial load)
+                if (!isFirstTrackingLoad && !notifiedJobComplete) {
+                  notifiedJobComplete = true;
+                  showCustBrowserNotification(
+                    '✅ Repair Completed!',
+                    `Your ${o.brand} ${o.repair} is done! Please rate your experience.`,
+                    'review',
+                    'cust-job-complete',
+                    'job-complete'
+                  );
+                }
+                jobDone = true;
+                document.getElementById('trackStatus').textContent = '✅ Repair Completed!';
+                document.getElementById('trackPill').style.background = '#2e7d32';
+                document.getElementById('trackPillText').textContent = '✅ Done';
+                document.getElementById('stepInProgress').className = 'dot dot-done';
+                document.getElementById('stepDone').className = 'dot dot-done';
+                document.getElementById('reviewBtn').style.display = 'flex';
+                if (techMarker) { map.removeLayer(techMarker); techMarker = null; }
+                if (polyline) { map.removeLayer(polyline); polyline = null; }
+              }
             }
           });
+          isFirstTrackingLoad = false; // done with initial load, future callbacks are real updates
         };
         ordersRef.on('value', onOrders);
 
-        function updateDistance() {
-          if (!hasTechLocation) return;
+        function updateDistanceDisplay() {
+          if (!hasTechLocation || !techLat) return;
+          const d = parseFloat(calcDistance(custLat, custLng, techLat, techLng));
+          document.getElementById('trackDistance').textContent = d + ' km';
+          const etaMins = Math.round(d / SPEED);
+          document.getElementById('trackEta').textContent = '~' + Math.max(1, etaMins) + ' mins';
+          if (polyline) {
+            polyline.setLatLngs([[custLat, custLng], [techLat, techLng]]);
+          }
           if (techMarker) {
-            const tLatLng = techMarker.getLatLng();
-            const d = parseFloat(calcDistance(custLat, custLng, tLatLng.lat, tLatLng.lng));
-            document.getElementById('trackDistance').textContent = d + ' km';
-            document.getElementById('trackEta').textContent = '~' + Math.round(d / 0.5) + ' mins';
+            techMarker.setLatLng([techLat, techLng]);
           }
         }
 
@@ -189,13 +311,13 @@ Router.register('tracking', {
         };
 
         window.goToChat = () => {
-          Router.navigate('chat', { orderId, role: 'cust', techName: techNameVal, customerName: 'You' });
+          Router.navigate('chat', { orderId, role: 'cust', techName: techNameVal, customerName: Store.get('custName', 'Customer') });
         };
 
         return () => {
           stopGPS();
           techLocRef.off('value', onTechLoc);
-          techInfoRef.off('value', onTechInfo);
+
           ordersRef.off('value', onOrders);
           delete window.callTech;
           delete window.goToChat;

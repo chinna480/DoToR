@@ -261,15 +261,8 @@ const NavBar = {
 
 // ─── Download App Banner ─────────────────────────────────────
 window.downloadApp = () => {
-  // Show download options - open app store or display info
-  showAlert('📱 Download DoToR App',
-    'Get the full experience on your phone!\n\n• Faster booking\n• Live technician tracking\n• Real-time chat\n• Instant notifications',
-    [
-      { text: 'Google Play', onPress: () => window.open('https://play.google.com/store/apps/details?id=com.dotor.app', '_blank') },
-      { text: 'App Store', onPress: () => window.open('https://apps.apple.com/app/dotor/id123456789', '_blank') },
-      { text: 'Later' }
-    ]
-  );
+  // Direct download of the APK hosted on this site
+  window.open('downloads/DoToR-App-v1.0.0.apk', '_blank');
 };
 
 window.dismissDownloadBanner = () => {

@@ -5,45 +5,102 @@ Router.register('tech-home', {
     const loc = Store.get('techLocation', 'Your Location');
     return {
       html: `
-        <div class="screen">
-          <div class="tech-header">
-            <div>
-              <div class="tech-greeting">Welcome Back! 👋</div>
-              <div class="tech-name-text">${name}</div>
-              <div class="tech-loc-text">📍 ${loc}</div>
+        <div class="screen" id="techHomeScreen">
+          <!-- HOME TAB CONTENT -->
+          <div id="techHomeContent">
+            <div class="tech-header">
+              <div>
+                <div class="tech-greeting">Welcome Back! 👋</div>
+                <div class="tech-name-text">${name}</div>
+                <div class="tech-loc-text">📍 Serving ${loc}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+                <button class="tech-avatar-btn" onclick="Router.navigate('tech-profile')">
+                  <span style="font-size:24px">🔧</span>
+                </button>
+                <button class="online-pill active" id="onlineBtn" onclick="window.toggleOnline()">
+                  🟢 Online
+                </button>
+              </div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-              <button class="tech-avatar-btn" onclick="Router.navigate('tech-profile')">
-                <span style="font-size:24px">🔧</span>
-              </button>
-              <button class="online-pill active" id="onlineBtn" onclick="window.toggleOnline()">
-                🟢 Online
-              </button>
-              <button style="background:none;border:none;color:rgba(255,255,255,0.8);font-size:11px;font-weight:800;cursor:pointer" onclick="window.techLogout()">Logout</button>
+            <div class="earnings-row">
+              <div class="earn-card"><div class="earn-label">Today's Jobs</div><div class="earn-value" id="totalJobs">0</div></div>
+              <div class="earn-card"><div class="earn-label">Pending</div><div class="earn-value" id="pendingCount">0</div></div>
+              <div class="earn-card"><div class="earn-label">Total</div><div class="earn-value" id="totalCompleted">0</div></div>
+            </div>
+            <div class="section-title">🔧 Ongoing Job</div>
+            <div id="ongoingJob">
+              <div class="empty-card"><span class="empty-text">No ongoing job right now</span></div>
+            </div>
+            <div class="section-title">⚡ Quick Actions</div>
+            <div class="quick-row">
+              <div class="quick-card" onclick="window.switchTechTab('pending')">
+                <div class="quick-icon-wrap">📋</div>
+                <div class="quick-label">Pending Jobs</div>
+                <div class="quick-count" id="quickPendingCount">0</div>
+              </div>
+              <div class="quick-card" onclick="window.switchTechTab('completed')">
+                <div class="quick-icon-wrap">✅</div>
+                <div class="quick-label">Completed</div>
+                <div class="quick-sub-label" id="quickCompletedLabel">0 today</div>
+              </div>
+              <div class="quick-card" onclick="window.techWebLogout()">
+                <div class="quick-icon-wrap">🚪</div>
+                <div class="quick-label">Logout</div>
+              </div>
+            </div>
+            <div style="height:80px"></div>
+          </div>
+
+          <!-- PENDING TAB CONTENT -->
+          <div id="techPendingContent" style="display:none">
+            <div class="header header-orange">
+              <div>
+                <div class="home-greeting">📋 Pending Jobs</div>
+                <div class="home-name" id="techPendingTitle">0 jobs waiting</div>
+              </div>
+            </div>
+            <div id="pendingJobsList">
+              <div class="empty-card"><span class="empty-text">No new jobs right now</span></div>
+            </div>
+            <div style="height:80px"></div>
+          </div>
+
+          <!-- COMPLETED TAB CONTENT -->
+          <div id="techCompletedContent" style="display:none">
+            <div class="header header-orange">
+              <div>
+                <div class="home-greeting">✅ Completed Jobs</div>
+                <div class="home-name" id="techCompletedTitle">0 total</div>
+              </div>
+            </div>
+            <div id="completedJobsList">
+              <div class="empty-card"><span class="empty-text">No completed jobs yet</span></div>
+            </div>
+            <div style="height:80px"></div>
+          </div>
+
+          <!-- BOTTOM TAB BAR -->
+          <div class="bottom-tab-bar" id="techTabBar">
+            <div class="tab-item active" data-tab="home" onclick="window.switchTechTab('home')">
+              <span class="tab-icon">🏠</span>
+              <span class="tab-label">Home</span>
+              <div class="tab-indicator"></div>
+            </div>
+            <div class="tab-item" data-tab="pending" onclick="window.switchTechTab('pending')">
+              <span class="tab-icon">📋</span>
+              <span class="tab-label">Pending</span>
+              <div class="tab-badge" id="pendingBadge" style="display:none">0</div>
+            </div>
+            <div class="tab-item" data-tab="completed" onclick="window.switchTechTab('completed')">
+              <span class="tab-icon">✅</span>
+              <span class="tab-label">Completed</span>
+            </div>
+            <div class="tab-item" data-tab="profile" onclick="window.switchTechTab('profile')">
+              <span class="tab-icon">👤</span>
+              <span class="tab-label">Profile</span>
             </div>
           </div>
-          <div class="earnings-row">
-            <div class="earn-card"><div class="earn-label">Today's Jobs</div><div class="earn-value" id="totalJobs">0</div></div>
-            <div class="earn-card"><div class="earn-label">Pending</div><div class="earn-value" id="pendingCount">0</div></div>
-            <div class="earn-card"><div class="earn-label">Status</div><div class="earn-value earn-value-sm" id="techStatus">🟢 Active</div></div>
-          </div>
-          <div class="section-title">📋 Pending Jobs <span style="font-size:12px;font-weight:400;color:var(--gray)" id="areaTag"></span></div>
-          <div id="pendingJobs">
-            <div class="empty-card"><span class="empty-text">No new jobs right now</span></div>
-          </div>
-          <div class="section-title">📅 Scheduled Appointments <span style="font-size:12px;font-weight:400;color:var(--gray)" id="scheduledCount"></span></div>
-          <div id="scheduledAppointments">
-            <div class="empty-card"><span class="empty-text">No scheduled appointments</span></div>
-          </div>
-          <div class="section-title">🔧 Ongoing Job</div>
-          <div id="ongoingJob">
-            <div class="empty-card"><span class="empty-text">No ongoing job right now</span></div>
-          </div>
-          <div class="section-title">✅ Completed Jobs</div>
-          <div id="completedJobs">
-            <div class="empty-card"><span class="empty-text">No completed jobs yet</span></div>
-          </div>
-          <div style="height:40px"></div>
         </div>
       `,
       init() {
@@ -52,57 +109,134 @@ Router.register('tech-home', {
         let custLat = null, custLng = null;
         let myLat = 17.3850, myLng = 78.4867;
         let prevPendingIds = new Set();
+        let isFirstLoad = true; // skip browser notifications on initial page load
         let map = null, custMarker = null, myMarker = null, polyline = null;
         let techPushToken = Store.get('pushToken', '');
+        let dailyCompletedCount = 0;
+        let areaAssignments = {};
+        let pendingOrdersMap = {};
+        const myPhone = Store.get('techPhone', '');
+        const SPEED = 0.3; // km/min (~18 km/h — realistic city speed)
 
-        const techArea = Store.get('techLocation', '').toLowerCase().trim();
-        const techPincode = Store.get('techPincode', '').trim();
-
-        function matchesLocation(order) {
-          // If tech has no location set, show all orders
-          if (!techArea && !techPincode) return true;
-
-          const orderPincode = (order.pincode || '').trim();
-          const orderArea = (order.location || '').toLowerCase().trim();
-
-          // If tech has both area and pincode, both must match
-          if (techArea && techPincode) {
-            return orderArea === techArea && orderPincode === techPincode;
-          }
-
-          // If tech has only pincode, match by pincode
-          if (techPincode) {
-            return orderPincode === techPincode;
-          }
-
-          // If tech has only area, match by area (backward compat)
-          return orderArea === techArea;
+        // ── Browser Notification Support ────────────────────────────────────────
+        // Request permission for desktop browser notifications
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission().catch(() => {});
         }
 
-        function renderPending(pending) {
-          const el = document.getElementById('pendingJobs');
+        function playNotifSound(type) {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (type === 'new-job') {
+              // Two quick urgent beeps — new job alert!
+              const osc1 = ctx.createOscillator(); const g1 = ctx.createGain();
+              osc1.connect(g1); g1.connect(ctx.destination);
+              osc1.frequency.value = 900;
+              g1.gain.setValueAtTime(0.12, ctx.currentTime);
+              g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+              osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.12);
+
+              const osc2 = ctx.createOscillator(); const g2 = ctx.createGain();
+              osc2.connect(g2); g2.connect(ctx.destination);
+              osc2.frequency.value = 1200;
+              g2.gain.setValueAtTime(0.12, ctx.currentTime + 0.15);
+              g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.27);
+              osc2.start(ctx.currentTime + 0.15); osc2.stop(ctx.currentTime + 0.27);
+            }
+          } catch (e) {}
+        }
+
+        function showBrowserNotification(title, body, orderId) {
+          if (!('Notification' in window) || Notification.permission !== 'granted') return;
+          try {
+            const notif = new Notification(title, {
+              body,
+              icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔧</text></svg>',
+              tag: 'new-job-' + orderId,
+              requireInteraction: true,
+            });
+            notif.onclick = () => {
+              window.focus();
+              if (window.switchTechTab) window.switchTechTab('pending');
+              notif.close();
+            };
+            // Play a distinct "new job" sound effect
+            playNotifSound('new-job');
+          } catch (e) { /* notification failed silently */ }
+        }
+
+        function renderPendingJobs(pending) {
+          // Store orders in map so acceptJob can look up order data without HTML escaping issues
+          pendingOrdersMap = {};
+          pending.forEach(o => { pendingOrdersMap[o.id] = o; });
+
+          const el = document.getElementById('pendingJobsList');
+          const title = document.getElementById('techPendingTitle');
+          const count = document.getElementById('pendingCount');
+          if (!el) return;
           if (pending.length === 0) {
-            el.innerHTML = '<div class="empty-card"><span class="empty-text">No new jobs right now</span></div>';
-            document.getElementById('pendingCount').textContent = '0';
+            el.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:50px;margin-bottom:15px">🎉</div><div style="font-size:16px;font-weight:800;color:var(--dark)">All caught up!</div><div style="font-size:13px;color:var(--gray);margin-top:5px">No pending jobs right now</div></div>';
+            if (title) title.textContent = '0 jobs waiting';
+            if (count) count.textContent = '0';
             return;
           }
-          document.getElementById('pendingCount').textContent = pending.length;
+          if (title) title.textContent = pending.length + ' jobs waiting';
+          if (count) count.textContent = pending.length;
           el.innerHTML = pending.map(o => `
             <div class="job-card pending">
               <div class="job-new-badge">NEW</div>
               <div class="job-customer">👤 ${o.customerName}</div>
               <div class="job-type">📱 ${o.brand} — ${o.repair}</div>
               <div class="job-location">📍 ${o.location}</div>
+              ${o.pincode ? `<div class="job-location">📮 ${o.pincode}</div>` : ''}
               <div class="job-time">🕐 ${o.time}</div>
               <div class="job-actions">
-                <button class="btn btn-sm btn-danger" onclick="window.rejectJob('${o.id}')" style="flex:1">✕ Reject</button>
-                <button class="btn btn-sm btn-dark" onclick="window.acceptJob('${o.id}')" style="flex:1">✓ Accept</button>
+                ${ongoingOrder
+                  ? '<div style="width:100%;background:#fff3e0;padding:10px;border-radius:10px;text-align:center;font-size:12px;font-weight:700;color:#e65100">⚠️ Complete current job first</div>'
+                  : `
+                    <button class="btn btn-sm btn-danger" onclick="window.rejectJob('${o.id}')" style="flex:1">✕ Reject</button>
+                    <button class="btn btn-sm btn-dark" onclick="window.acceptJob('${o.id}')" style="flex:1">✓ Accept</button>
+                  `
+                }
+              </div>
+              ${o.id ? `<button class="btn btn-primary btn-sm btn-block" onclick="window.goToChatFromPending('${o.id}','${o.customerName || 'Customer'}'}" style="margin-top:8px">💬 Chat with Customer</button>` : ''}
+            </div>
+          `).join('');
+        }
+
+        function renderCompletedJobs(completed) {
+          const el = document.getElementById('completedJobsList');
+          const title = document.getElementById('techCompletedTitle');
+          const quickLabel = document.getElementById('quickCompletedLabel');
+          const totalEl = document.getElementById('totalCompleted');
+          if (!el) return;
+          if (completed.length === 0) {
+            el.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:50px;margin-bottom:15px">📦</div><div style="font-size:16px;font-weight:800;color:var(--dark)">No completed jobs yet</div><div style="font-size:13px;color:var(--gray);margin-top:5px">Your completed jobs will appear here!</div></div>';
+            if (title) title.textContent = '0 total';
+            if (quickLabel) quickLabel.textContent = '0 today';
+            if (totalEl) totalEl.textContent = '0';
+            return;
+          }
+          if (title) title.textContent = completed.length + ' total · ' + dailyCompletedCount + ' today';
+          if (quickLabel) quickLabel.textContent = dailyCompletedCount + ' today';
+          if (totalEl) totalEl.textContent = completed.length;
+          el.innerHTML = completed.slice(0, 30).map(o => `
+            <div class="completed-card">
+              <div class="comp-left">
+                <div class="comp-customer">👤 ${o.customerName}</div>
+                <div class="comp-type">📱 ${o.brand} — ${o.repair}</div>
+                <div class="comp-time-small">📍 ${o.location}</div>
+                ${o.pincode ? `<div class="comp-time-small">📮 ${o.pincode}</div>` : ''}
+              </div>
+              <div class="comp-right">
+                <div class="comp-done">✅ Done</div>
+                <div class="comp-time-small">${o.time || ''}</div>
               </div>
             </div>
           `).join('');
         }
 
-        function renderOngoing(order) {
+        function renderHomeOngoing(order) {
           const el = document.getElementById('ongoingJob');
           if (!order) {
             el.innerHTML = '<div class="empty-card"><span class="empty-text">No ongoing job right now</span></div>';
@@ -110,14 +244,16 @@ Router.register('tech-home', {
             stopGPS();
             return;
           }
-          const distance = (custLat && myLat) ? calcDistance(myLat, myLng, custLat, custLng) + ' km' : '--';
-          const eta = (custLat && myLat) ? '~' + Math.round(parseFloat(distance) / 0.5) + ' mins' : '--';
+          const d = (custLat && myLat) ? parseFloat(calcDistance(myLat, myLng, custLat, custLng)) : null;
+          const distance = d !== null ? d + ' km' : '--';
+          const eta = d !== null ? '~' + Math.max(1, Math.round(d / SPEED)) + ' mins' : '--';
 
           el.innerHTML = `
             <div class="ongoing-card">
               <div class="job-customer">👤 ${order.customerName}</div>
               <div class="job-type">📱 ${order.brand} — ${order.repair}</div>
               <div class="job-location">📍 ${order.location}</div>
+              ${order.pincode ? `<div class="job-location">📮 ${order.pincode}</div>` : ''}
               <div class="ongoing-progress">⚡ In Progress...</div>
               <div class="dist-banner" style="background:var(--light-gray);margin:10px 0">
                 <div>
@@ -148,7 +284,6 @@ Router.register('tech-home', {
             </div>
           `;
 
-          // Initialize map
           if (custLat || myLat) {
             setTimeout(() => {
               const mc = document.getElementById('techMapContainer');
@@ -172,98 +307,121 @@ Router.register('tech-home', {
           }
         }
 
-        function renderScheduled(scheduled) {
-          const el = document.getElementById('scheduledAppointments');
-          const countEl = document.getElementById('scheduledCount');
-          if (scheduled.length === 0) {
-            el.innerHTML = '<div class="empty-card"><span class="empty-text">No scheduled appointments</span></div>';
-            if (countEl) countEl.textContent = '';
+        window.switchTechTab = (tab) => {
+          if (tab === 'profile') {
+            Router.navigate('tech-profile');
             return;
           }
-          if (countEl) countEl.textContent = `(${scheduled.length})`;
-          el.innerHTML = scheduled.map(o => `
-            <div class="job-card pending" style="border-left-color:var(--dark)">
-              <div class="job-new-badge" style="background:var(--dark)">📅 Appointment</div>
-              <div class="job-customer">👤 ${o.customerName}</div>
-              <div class="job-type" style="color:var(--dark)">📅 ${o.dateLabel || 'Scheduled'}</div>
-              <div class="job-type">🕐 ${o.time || o.repair?.replace('Appointment: ', '') || '--'}</div>
-              <div class="job-location">📍 ${o.location}</div>
-              <div class="job-actions">
-                <button class="btn btn-sm btn-danger" onclick="window.rejectAppointment('${o.id}')" style="flex:1">✕ Reject</button>
-                <button class="btn btn-sm btn-primary" onclick="window.acceptAppointment('${o.id}')" style="flex:1">✓ Accept</button>
-              </div>
-            </div>
-          `).join('');
-        }
+          document.querySelectorAll('#techTabBar .tab-item').forEach(t => t.classList.remove('active'));
+          const tabEl = document.querySelector(`#techTabBar .tab-item[data-tab="${tab}"]`);
+          if (tabEl) tabEl.classList.add('active');
 
-        function renderCompleted(completed) {
-          const el = document.getElementById('completedJobs');
-          if (completed.length === 0) {
-            el.innerHTML = '<div class="empty-card"><span class="empty-text">No completed jobs yet</span></div>';
-            return;
+          document.getElementById('techHomeContent').style.display = tab === 'home' ? 'block' : 'none';
+          document.getElementById('techPendingContent').style.display = tab === 'pending' ? 'block' : 'none';
+          document.getElementById('techCompletedContent').style.display = tab === 'completed' ? 'block' : 'none';
+        };
+
+        // Listen for area assignments
+        const areaAssignmentsRef = firebase.database().ref('areaAssignments');
+        areaAssignmentsRef.on('value', (snap) => {
+          if (snap.exists()) {
+            areaAssignments = snap.val();
+          } else {
+            areaAssignments = {};
           }
-          el.innerHTML = completed.map(o => `
-            <div class="completed-card">
-              <div class="comp-left">
-                <div class="comp-customer">👤 ${o.customerName}</div>
-                <div class="comp-type">📱 ${o.brand} — ${o.repair}</div>
-              </div>
-              <div class="comp-right">
-                <div class="comp-done">✅ Done</div>
-                <div class="comp-time-small">${o.time || ''}</div>
-              </div>
-            </div>
-          `).join('');
-        }
-
-        // Show area/pincode filter tag
-        const myArea = Store.get('techLocation', '');
-        const myPincode = Store.get('techPincode', '');
-        const areaTag = document.getElementById('areaTag');
-        if (areaTag) {
-          const tagParts = [];
-          if (myArea) tagParts.push('📍 ' + myArea);
-          if (myPincode) tagParts.push('📮 ' + myPincode);
-          areaTag.textContent = tagParts.length ? tagParts.join(' · ') : '';
-        }
+        });
 
         // Listen for orders
         const ordersRef = firebase.database().ref('orders');
         const onOrders = (snap) => {
-          const pending = [], scheduled = [], completed = [];
+          const pending = [], completed = [];
           let ongoing = null, count = 0;
+          dailyCompletedCount = 0;
 
           snap.forEach(child => {
             const order = { id: child.key, ...child.val() };
-            if (order.status === 'scheduled' && order.isAppointment && matchesLocation(order)) {
-              scheduled.push(order);
+            if (order.status === 'pending') pending.push(order);
+            if (order.status === 'accepted') {
+              // Only mark as ongoing if THIS tech accepted the job
+              if (order.techPhone === myPhone) ongoing = order;
             }
-            if (order.status === 'pending' && matchesLocation(order)) {
-              pending.push(order);
-            }
-            if (order.status === 'accepted') ongoing = order;
-            if (order.status === 'completed') { completed.push(order); count++; }
+            if (order.status === 'completed') { completed.push(order); count++; dailyCompletedCount++; }
           });
 
-          // Notify for new pending jobs
-          pending.forEach(o => {
-            if (!prevPendingIds.has(o.id)) {
-              // Could show browser notification here
-            }
-          });
-          prevPendingIds = new Set(pending.map(o => o.id));
+          // Filter pending jobs by technician's location area AND pincode
+          const techLoc     = Store.get('techLocation', '').toLowerCase().trim();
+          const techPincode = Store.get('techPincode', '').toLowerCase().trim();
+          let filteredPending = pending;
 
-          document.getElementById('totalJobs').textContent = count;
-          renderPending(pending);
-          renderScheduled(scheduled);
-          renderCompleted(completed);
+          // Use flexible location matching: check if one contains the other
+          // This handles Google Places formatting differences (e.g. "Kukatpally" vs "Kukatpally, Hyderabad")
+          if (techLoc) {
+            filteredPending = filteredPending.filter(o => {
+              const orderLoc = (o.location || '').toLowerCase().trim();
+              return orderLoc.includes(techLoc) || techLoc.includes(orderLoc);
+            });
+          }
+          if (techPincode) {
+            filteredPending = filteredPending.filter(o => (o.pincode || '').toLowerCase().trim() === techPincode);
+          }
+
+          // If an area is already assigned to a different technician, exclude those jobs
+          // so only the assigned technician sees them
+          filteredPending = filteredPending.filter(o => {
+            const area = (o.location || '').toLowerCase().trim();
+            const assignedTech = areaAssignments[area];
+            if (!area || !assignedTech) return true; // No assignment → anyone can take it
+            // If assigned to this tech → show it
+            return assignedTech.phone === myPhone;
+          });
+
+          // Show browser notifications for NEW pending orders (skip on first load to avoid spamming)
+          if (!isFirstLoad) {
+            filteredPending.forEach(o => {
+              if (!prevPendingIds.has(o.id)) {
+                showBrowserNotification(
+                  '🔔 New Job Request!',
+                  `${o.customerName} needs ${o.brand} ${o.repair} in ${o.location}`,
+                  o.id
+                );
+              }
+            });
+          }
+          isFirstLoad = false;
+          prevPendingIds = new Set(filteredPending.map(o => o.id));
+
+          pending.length = 0;
+          pending.push(...filteredPending);
+
+          document.getElementById('totalJobs').textContent = dailyCompletedCount;
+          document.getElementById('pendingCount').textContent = pending.length;
+          document.getElementById('totalCompleted').textContent = count;
+          document.getElementById('quickPendingCount').textContent = pending.length;
+          document.getElementById('quickCompletedLabel').textContent = dailyCompletedCount + ' today';
+
+          // Update pending badge on tab
+          const badge = document.getElementById('pendingBadge');
+          if (badge) {
+            if (pending.length > 0) {
+              badge.style.display = 'flex';
+              badge.textContent = pending.length > 9 ? '9+' : pending.length;
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+
+          renderPendingJobs(pending);
+          renderCompletedJobs(completed);
 
           if (ongoing && (!ongoingOrder || ongoingOrder.id !== ongoing.id)) {
             ongoingOrder = ongoing;
+            renderHomeOngoing(ongoing);
             startLocationSharing();
           } else if (!ongoing) {
             ongoingOrder = null;
-            renderOngoing(null);
+            renderHomeOngoing(null);
+          } else if (ongoing) {
+            renderHomeOngoing(ongoing);
           }
         };
         ordersRef.on('value', onOrders);
@@ -275,7 +433,7 @@ Router.register('tech-home', {
           custLat = snap.val().lat;
           custLng = snap.val().lng;
           if (ongoingOrder) {
-            renderOngoing(ongoingOrder);
+            renderHomeOngoing(ongoingOrder);
             updateDistanceAndEta();
           }
         };
@@ -284,9 +442,11 @@ Router.register('tech-home', {
         function updateDistanceAndEta() {
           if (!custLat || !myLat || !ongoingOrder) return;
           const d = parseFloat(calcDistance(myLat, myLng, custLat, custLng));
-          const etaMins = Math.round(d / 0.5);
-          document.getElementById('techDistance').textContent = d + ' km';
-          document.getElementById('techEta').textContent = '~' + etaMins + ' mins';
+          const etaMins = Math.round(d / SPEED);
+          const distEl = document.getElementById('techDistance');
+          const etaEl = document.getElementById('techEta');
+          if (distEl) distEl.textContent = d + ' km';
+          if (etaEl) etaEl.textContent = '~' + Math.max(1, etaMins) + ' mins';
           if (myMarker && custMarker) {
             myMarker.setLatLng([myLat, myLng]);
             custMarker.setLatLng([custLat, custLng]);
@@ -306,33 +466,23 @@ Router.register('tech-home', {
           const name = Store.get('techName', 'Technician');
           const loc = Store.get('techLocation', '');
           const phone = Store.get('techPhone', '');
+          const order = pendingOrdersMap[orderId] || {};
           Store.set('currentOrderId', orderId);
           firebase.database().ref('techInfo').set({ name, location: loc, phone });
-          firebase.database().ref('orders/' + orderId).update({ status: 'accepted' })
-            .then(() => showAlert('✅ Job Accepted!', 'Customer can now track you!'))
+          firebase.database().ref('orders/' + orderId).update({ status: 'accepted', techPhone: phone, techName: name })
+            .then(() => {
+              // Claim this area for this technician so future jobs here come to them
+              const area = (order.location || '').toLowerCase().trim();
+              if (area) {
+                firebase.database().ref('areaAssignments/' + area).set({ name, phone, location: loc });
+              }
+              showAlert('✅ Job Accepted!', 'Customer can now track you!');
+            })
             .catch(() => showAlert('Error', 'Failed to accept. Try again!'));
         };
 
         window.rejectJob = (orderId) => {
           showAlert('Reject Job?', 'Are you sure?', [
-            { text: 'Cancel' },
-            { text: 'Reject', style: 'destructive', onPress: () => firebase.database().ref('orders/' + orderId).update({ status: 'rejected' }) }
-          ]);
-        };
-
-        window.acceptAppointment = (orderId) => {
-          const name = Store.get('techName', 'Technician');
-          const loc = Store.get('techLocation', '');
-          const phone = Store.get('techPhone', '');
-          Store.set('currentOrderId', orderId);
-          firebase.database().ref('techInfo').set({ name, location: loc, phone });
-          firebase.database().ref('orders/' + orderId).update({ status: 'accepted', brand: 'Appointment', techPhone: phone })
-            .then(() => showAlert('✅ Appointment Accepted!', 'Customer will be notified.\n\nStart heading to their location!'))
-            .catch(() => showAlert('Error', 'Failed to accept. Try again!'));
-        };
-
-        window.rejectAppointment = (orderId) => {
-          showAlert('Reject Appointment?', 'Are you sure?', [
             { text: 'Cancel' },
             { text: 'Reject', style: 'destructive', onPress: () => firebase.database().ref('orders/' + orderId).update({ status: 'rejected' }) }
           ]);
@@ -379,44 +529,49 @@ Router.register('tech-home', {
           }
         };
 
+        window.goToChatFromPending = (orderId, customerName) => {
+          Router.navigate('chat', {
+            orderId,
+            role: 'tech',
+            customerName,
+            techName: Store.get('techName', 'Technician')
+          });
+        };
+
         window.toggleOnline = () => {
           isOnline = !isOnline;
           const btn = document.getElementById('onlineBtn');
-          const status = document.getElementById('techStatus');
           if (isOnline) {
             btn.className = 'online-pill active';
             btn.textContent = '🟢 Online';
-            status.textContent = '🟢 Active';
           } else {
             btn.className = 'online-pill inactive';
             btn.textContent = '🔴 Offline';
-            status.textContent = '🔴 Off';
           }
         };
 
-        window.techLogout = () => {
+        window.techWebLogout = () => {
           showAlert('Logout?', 'Are you sure?', [
             { text: 'Cancel' },
             { text: 'Logout', style: 'destructive', onPress: () => { Store.clear(); Router.navigate('role'); } }
           ]);
-        };
-
-        return () => {
-          ordersRef.off('value', onOrders);
-          custLocRef.off('value', onCustLoc);
-          stopGPS();
-          if (map) { map.remove(); window._currentMap = null; }
-          delete window.acceptJob;
-          delete window.rejectJob;
-          delete window.acceptAppointment;
-          delete window.rejectAppointment;
-          delete window.completeJob;
-          delete window.navigateToCustomer;
-          delete window.callCustomer;
-          delete window.goToTechChat;
-          delete window.toggleOnline;
-          delete window.techLogout;
-        };
+        };          return () => {
+            ordersRef.off('value', onOrders);
+            areaAssignmentsRef.off('value');
+            custLocRef.off('value', onCustLoc);
+            stopGPS();
+            if (map) { map.remove(); window._currentMap = null; }
+            delete window.switchTechTab;
+            delete window.acceptJob;
+            delete window.rejectJob;
+            delete window.completeJob;
+            delete window.navigateToCustomer;
+            delete window.callCustomer;
+            delete window.goToTechChat;
+            delete window.goToChatFromPending;
+            delete window.toggleOnline;
+            delete window.techWebLogout;
+          };
       }
     };
   }

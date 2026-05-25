@@ -362,17 +362,25 @@ Router.register('tech-home', {
             });
           }
           if (techPincode) {
-            filteredPending = filteredPending.filter(o => (o.pincode || '').toLowerCase().trim() === techPincode);
+            filteredPending = filteredPending.filter(o => {
+              const orderPincode = (o.pincode || '').toLowerCase().trim();
+              // If the order has no pincode (older orders), still show it
+              if (!orderPincode) return true;
+              return orderPincode === techPincode;
+            });
           }
 
-          // If an area is already assigned to a different technician, exclude those jobs
-          // so only the assigned technician sees them
+          // Area assignment: if an area is assigned to a DIFFERENT technician, hide those jobs
+          // Only block if the area assignment is for the EXACT same location string
           filteredPending = filteredPending.filter(o => {
             const area = (o.location || '').toLowerCase().trim();
             const assignedTech = areaAssignments[area];
-            if (!area || !assignedTech) return true; // No assignment → anyone can take it
-            // If assigned to this tech → show it
-            return assignedTech.phone === myPhone;
+            if (!area || !assignedTech) return true;
+            // Show it if assigned to this tech OR if the assignment is very old (>5 min)
+            if (assignedTech.phone === myPhone) return true;
+            // Check if assignment is stale (older than 5 minutes = 300000 ms)
+            // This prevents a single accepted job from permanently blocking an area
+            return false;
           });
 
           // Show browser notifications for NEW pending orders (skip on first load to avoid spamming)

@@ -370,18 +370,9 @@ Router.register('tech-home', {
             });
           }
 
-          // Area assignment: if an area is assigned to a DIFFERENT technician, hide those jobs
-          // Only block if the area assignment is for the EXACT same location string
-          filteredPending = filteredPending.filter(o => {
-            const area = (o.location || '').toLowerCase().trim();
-            const assignedTech = areaAssignments[area];
-            if (!area || !assignedTech) return true;
-            // Show it if assigned to this tech OR if the assignment is very old (>5 min)
-            if (assignedTech.phone === myPhone) return true;
-            // Check if assignment is stale (older than 5 minutes = 300000 ms)
-            // This prevents a single accepted job from permanently blocking an area
-            return false;
-          });
+          // Area assignment: do NOT block pending jobs from being visible to other techs.
+          // The area assignment is only used when a tech accepts a job (to track who's serving which area),
+          // but all pending jobs should be visible to all techs in that location/pincode.
 
           // Show browser notifications for NEW pending orders (skip on first load to avoid spamming)
           if (!isFirstLoad) {

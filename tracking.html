@@ -89,12 +89,12 @@
 </head>
 <body>
   <nav class="nav">
-    <a href="/website/" class="nav-brand"><span>🔧</span> DoToR</a>
+    <a href="/" class="nav-brand"><span>🔧</span> DoToR</a>
     <div class="nav-links">
-      <a href="/website/">Book Repair</a>
-      <a href="/website/tracking.html" class="active">Track</a>
-      <a href="/website/orders.html">My Orders</a>
-      <a href="/website/profile.html">Profile</a>
+      <a href="/">Book Repair</a>
+      <a href="/tracking.html" class="active">Track</a>
+      <a href="/orders.html">My Orders</a>
+      <a href="/profile.html">Profile</a>
     </div>
   </nav>
 
@@ -107,19 +107,48 @@
     <div class="card tracking-layout">
       <div class="card-title">🔍 Find Your Order</div>
 
-      <!-- Order ID Input -->
-      <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">
-        Enter your Order ID to track your technician. You received this after booking.
-      </p>
-      <div class="order-id-input">
-        <input type="text" id="trackOrderId" class="form-input" placeholder="Paste Order ID here...">
-        <button class="btn btn-primary" onclick="startTracking()">🔍 Track</button>
+      <!-- Tab: Phone Search (default) vs Order ID -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" id="tabPhone" onclick="switchFindTab('phone')" style="flex:1;">📱 Search by Phone</button>
+        <button class="btn btn-outline btn-sm" id="tabOrderId" onclick="switchFindTab('orderid')" style="flex:1;">🔑 Enter Order ID</button>
       </div>
 
-      <!-- Recent bookings -->
+      <!-- Phone Search (default) -->
+      <div id="findByPhone">
+        <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">
+          Enter your phone number to find your orders and track the technician.
+        </p>
+        <div class="order-id-input">
+          <input type="tel" id="findPhone" class="form-input" placeholder="Enter your 10-digit phone number" maxlength="10">
+          <button class="btn btn-primary" onclick="findOrdersByPhone()">🔍 Find</button>
+        </div>
+
+        <!-- Found orders list -->
+        <div id="foundOrdersList" style="display:none;margin-top:12px;"></div>
+        <div id="noOrdersFound" style="display:none;text-align:center;padding:20px;">
+          <p style="font-size:13px;color:var(--gray);">No orders found with this phone number.</p>
+          <a href="/" class="btn btn-primary btn-sm" style="margin-top:10px;">📱 Book a Repair</a>
+        </div>
+        <div id="phoneLoading" style="display:none;text-align:center;padding:16px;">
+          <span style="color:var(--gray);font-size:13px;">⏳ Searching...</span>
+        </div>
+      </div>
+
+      <!-- Order ID Input (hidden by default) -->
+      <div id="findByOrderId" style="display:none;">
+        <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">
+          Paste your Order ID to track directly. You received this after booking.
+        </p>
+        <div class="order-id-input">
+          <input type="text" id="trackOrderId" class="form-input" placeholder="Paste Order ID here...">
+          <button class="btn btn-primary" onclick="startTracking()">🔍 Track</button>
+        </div>
+      </div>
+
+      <!-- Recent bookings (from localStorage after booking) -->
       <div id="recentBooking" style="display:none;">
-        <p style="font-size:12px;color:var(--gray);margin-bottom:8px;">Your recent booking:</p>
-        <button class="btn btn-outline btn-sm" id="recentBtn" onclick="trackRecent()"></button>
+        <div style="border-top:1px solid var(--gray-border);margin:12px 0 8px;"></div>
+        <button class="btn btn-outline btn-sm" id="recentBtn" onclick="trackRecent()" style="width:100%;"></button>
       </div>
     </div>
 
@@ -228,7 +257,7 @@
       <h3>No Active Tracking</h3>
       <p>Enter an Order ID above to start tracking your technician.</p>
       <div style="margin-top:16px;">
-        <a href="/website/" class="btn btn-primary">📱 Book a Repair</a>
+        <a href="/" class="btn btn-primary">📱 Book a Repair</a>
       </div>
     </div>
   </div>
@@ -236,10 +265,11 @@
   <div class="footer">© 2025 DoToR - Doorstep Repair Service</div>
 
   <script type="module">
-    import { listenOrder, listenTechLocation, calcDistance, getTechRating, getTechProfile } from './firebase.js';
+    import { listenOrder, listenCustomerOrders, listenTechLocation, calcDistance, getTechRating, getTechProfile } from './firebase.js';
 
     let unsubOrder = null;
     let unsubTechLoc = null;
+    let unsubOrders = null;
     let currentOrderId = null;
     let currentOrder = null;
     let techLat = null;
@@ -250,15 +280,124 @@
     // ── Init ──────────────────────────────────────────────────────────
     const savedOrderId = localStorage.getItem('lastOrderId');
     const savedName = localStorage.getItem('lastCustName');
+    const savedPhone = localStorage.getItem('lastCustPhone');
 
     if (savedOrderId) {
       document.getElementById('recentBooking').style.display = 'block';
-      document.getElementById('recentBtn').textContent = `📍 Track: ${savedName || 'Your Order'} (${savedOrderId.substring(0,8)}...)`;
+      document.getElementById('recentBtn').innerHTML = `📍 Track: ${savedName || 'Your Order'} <span style="font-size:10px;opacity:0.7;">(${savedOrderId.substring(0,8)}...)</span>`;
       document.getElementById('trackOrderId').value = savedOrderId;
-
-      // Auto-start tracking if we have a recent order
-      startTracking(savedOrderId);
     }
+
+    // Pre-fill phone from localStorage
+    if (savedPhone) {
+      document.getElementById('findPhone').value = savedPhone;
+      // Auto-search after a brief delay so page loads first
+      setTimeout(() => findOrdersByPhone(), 500);
+    }
+
+    // ── Tab Switching ──────────────────────────────────────────────────
+    window.switchFindTab = function(tab) {
+      const phoneTab = document.getElementById('tabPhone');
+      const orderTab = document.getElementById('tabOrderId');
+      if (tab === 'phone') {
+        phoneTab.className = 'btn btn-primary btn-sm';
+        orderTab.className = 'btn btn-outline btn-sm';
+        document.getElementById('findByPhone').style.display = 'block';
+        document.getElementById('findByOrderId').style.display = 'none';
+      } else {
+        phoneTab.className = 'btn btn-outline btn-sm';
+        orderTab.className = 'btn btn-primary btn-sm';
+        document.getElementById('findByPhone').style.display = 'none';
+        document.getElementById('findByOrderId').style.display = 'block';
+      }
+    };
+
+    // ── Find Orders by Phone ───────────────────────────────────────────
+    window.findOrdersByPhone = function() {
+      const phone = document.getElementById('findPhone').value.trim();
+      if (!phone || phone.length < 10) {
+        showToast('Please enter your 10-digit phone number', 'error');
+        return;
+      }
+
+      localStorage.setItem('lastCustPhone', phone);
+
+      // Clean up old listener
+      if (unsubOrders) unsubOrders();
+
+      document.getElementById('phoneLoading').style.display = 'block';
+      document.getElementById('foundOrdersList').style.display = 'none';
+      document.getElementById('noOrdersFound').style.display = 'none';
+
+      unsubOrders = listenCustomerOrders(phone, (orders) => {
+        document.getElementById('phoneLoading').style.display = 'none';
+
+        if (orders.length === 0) {
+          document.getElementById('noOrdersFound').style.display = 'block';
+          document.getElementById('foundOrdersList').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('foundOrdersList').style.display = 'block';
+        document.getElementById('noOrdersFound').style.display = 'none';
+
+        // Only show pending/accepted orders (not completed/rejected)
+        const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'accepted');
+        const completedOrders = orders.filter(o => o.status === 'completed');
+
+        let html = '';
+
+        if (activeOrders.length > 0) {
+          html += `<p style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">🟢 Active Orders</p>`;
+          html += activeOrders.map(order => `
+            <div class="order-card ${order.status}" style="margin-bottom:8px;padding:12px;">
+              <div class="order-left">
+                <div class="order-brand">📱 ${order.brand || 'Device'}</div>
+                <div class="order-detail">🔧 ${order.repair || 'Service'} · ${order.model || ''}</div>
+                <div class="order-detail">📍 ${order.location || ''}</div>
+                <div class="order-detail" style="margin-top:4px;">
+                  <span class="order-status ${order.status}">${order.status}</span>
+                </div>
+              </div>
+              <div class="order-right" style="display:flex;flex-direction:column;gap:4px;">
+                <button class="btn btn-primary btn-sm" onclick="trackOrder('${order.id}')">📍 Track</button>
+                ${order.status === 'accepted' && order.techName ? `<a href="chat.html?orderId=${order.id}" class="btn btn-outline btn-sm">💬 Chat</a>` : ''}
+              </div>
+            </div>
+          `).join('');
+        }
+
+        if (completedOrders.length > 0) {
+          html += `<p style="font-size:12px;font-weight:700;color:var(--gray);margin:12px 0 8px;">✅ Completed Orders</p>`;
+          completedOrders.slice(0, 3).forEach(order => {
+            html += `
+              <div class="order-card completed" style="margin-bottom:6px;padding:10px;">
+                <div class="order-left">
+                  <div class="order-brand" style="font-size:13px;">📱 ${order.brand || 'Device'}</div>
+                  <div class="order-detail" style="font-size:11px;">📍 ${order.location || ''}</div>
+                </div>
+                <div class="order-right">
+                  <span class="order-status completed">Done ✓</span>
+                </div>
+              </div>
+            `;
+          });
+          if (completedOrders.length > 3) {
+            html += `<p style="font-size:11px;color:var(--gray);text-align:center;">+${completedOrders.length - 3} more completed</p>`;
+          }
+        }
+
+        document.getElementById('foundOrdersList').innerHTML = html;
+      });
+    };
+
+    // ── Track Order (from found orders list) ───────────────────────────
+    window.trackOrder = function(orderId) {
+      // If we have an orders listener, clean it up
+      if (unsubOrders) { unsubOrders(); unsubOrders = null; }
+      // Start tracking
+      startTracking(orderId);
+    };
 
     window.startTracking = function(orderId) {
       const id = orderId || document.getElementById('trackOrderId').value.trim();
@@ -270,6 +409,7 @@
       // Clean up old listeners
       if (unsubOrder) unsubOrder();
       if (unsubTechLoc) unsubTechLoc();
+      if (unsubOrders) { unsubOrders(); unsubOrders = null; }
 
       // Show tracking view
       document.getElementById('emptyTrackState').style.display = 'none';
@@ -513,7 +653,18 @@
     }
 
     window.trackRecent = function() {
-      window.startTracking();
+      const orderId = document.getElementById('trackOrderId').value.trim();
+      if (orderId) {
+        trackOrder(orderId);
+      } else {
+        // Fallback: try phone search
+        const phone = localStorage.getItem('lastCustPhone');
+        if (phone) {
+          switchFindTab('phone');
+          document.getElementById('findPhone').value = phone;
+          findOrdersByPhone();
+        }
+      }
     };
 
     function showToast(msg, type = 'success') {

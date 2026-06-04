@@ -449,6 +449,114 @@ export async function getTechProfile(techPhone) {
   }
 }
 
+// ── CUSTOMER PROFILE MANAGEMENT ────────────────────────────────────────────
+export async function saveUserProfile(phone, data) {
+  try {
+    await set(ref(db, 'users/' + phone), {
+      ...data,
+      phone,
+      updatedAt: Date.now(),
+      createdAt: Date.now(),
+    });
+    console.log('✅ User profile saved:', phone);
+    return true;
+  } catch (err) {
+    console.error('❌ Failed to save user profile:', err);
+    throw err;
+  }
+}
+
+export async function getUserProfile(phone) {
+  try {
+    const snap = await get(ref(db, 'users/' + phone));
+    return snap.exists() ? snap.val() : null;
+  } catch (err) {
+    console.error('❌ Failed to get user profile:', err);
+    return null;
+  }
+}
+
+// ── CHAT SYSTEM ─────────────────────────────────────────────────────────────
+// Messages stored at chats/{orderId}/messages/{messageId}
+// Metadata stored at chats/{orderId}/metadata
+export async function sendMessage(orderId, messageData) {
+  try {
+    const msgRef = push(ref(db, 'chats/' + orderId + '/messages'));
+    const message = {
+      ...messageData,
+      timestamp: Date.now(),
+      read: false,
+    };
+    await set(msgRef, message);
+
+    // Update metadata
+    await update(ref(db, 'chats/' + orderId + '/metadata'), {
+      lastMessage: messageData.text || '',
+      lastSender: messageData.sender,
+      lastTimestamp: Date.now(),
+      unread: true,
+    });
+
+    console.log('✅ Message sent:', msgRef.key);
+    return { messageId: msgRef.key };
+  } catch (err) {
+    console.error('❌ Failed to send message:', err);
+    throw err;
+  }
+}
+
+export function listenMessages(orderId, callback) {
+  const messagesRef = ref(db, 'chats/' + orderId + '/messages');
+  const listener = onValue(messagesRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback([]);
+      return;
+    }
+    const messages = [];
+    snapshot.forEach(child => {
+      messages.push({ id: child.key, ...child.val() });
+    });
+    callback(messages);
+  });
+  return () => off(messagesRef, 'value', listener);
+}
+
+export function listenChatMetadata(orderId, callback) {
+  const metaRef = ref(db, 'chats/' + orderId + '/metadata');
+  const listener = onValue(metaRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  });
+  return () => off(metaRef, 'value', listener);
+}
+
+// ── AADHAR / DIGILOCKER VERIFICATION ────────────────────────────────────────
+export async function saveAadharVerification(phone, data) {
+  try {
+    await set(ref(db, 'users/' + phone + '/aadhar'), {
+      verified: true,
+      name: data.name || '',
+      lastFourDigits: data.lastFourDigits || '',
+      verifiedAt: Date.now(),
+      ...data,
+    });
+    console.log('✅ Aadhar verification saved for:', phone);
+    return true;
+  } catch (err) {
+    console.error('❌ Failed to save Aadhar verification:', err);
+    throw err;
+  }
+}
+
+export async function getAadharStatus(phone) {
+  try {
+    const snap = await get(ref(db, 'users/' + phone + '/aadhar'));
+    return snap.exists() ? snap.val() : null;
+  } catch (err) {
+    console.error('❌ Failed to get Aadhar status:', err);
+    return null;
+  }
+}
+
 export {
   db,
   ref,

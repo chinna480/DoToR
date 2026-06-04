@@ -94,7 +94,7 @@
       <a href="/website/">Book Repair</a>
       <a href="/website/tracking.html" class="active">Track</a>
       <a href="/website/orders.html">My Orders</a>
-      <a href="/website/admin/">Admin Panel</a>
+      <a href="/website/profile.html">Profile</a>
     </div>
   </nav>
 
@@ -180,9 +180,10 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="action-buttons">
+          <div class="action-buttons" style="flex-wrap:wrap;">
             <a class="btn btn-primary" id="navigateBtn" href="#" target="_blank">🗺️ Navigate</a>
             <a class="btn btn-green" id="callBtn" href="#">📞 Call</a>
+            <a class="btn btn-navy" id="chatBtn" href="#" style="display:none;">💬 Chat</a>
           </div>
         </div>
       </div>
@@ -386,6 +387,14 @@
           document.getElementById('navigateBtn').style.display = 'flex';
         } else {
           document.getElementById('navigateBtn').style.display = 'none';
+        }
+
+        // Chat button
+        if (currentOrderId) {
+          document.getElementById('chatBtn').href = `chat.html?orderId=${currentOrderId}`;
+          document.getElementById('chatBtn').style.display = 'flex';
+        } else {
+          document.getElementById('chatBtn').style.display = 'none';
         }
 
         // Map

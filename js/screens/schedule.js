@@ -33,27 +33,27 @@ Router.register('schedule', {
             <span class="header-title">📅 Schedule Appointment</span>
             <div style="width:40px"></div>
           </div>
-          <div class="schedule-banner">
+          <div class="schedule-banner glass">
             <div class="schedule-banner-icon">🕐</div>
             <div>
               <div class="schedule-banner-title">Choose your preferred time</div>
-              <div class="schedule-banner-sub">Select date & time slot below</div>
+              <div class="schedule-banner-sub">📅 Select date & time slot below</div>
             </div>
           </div>
-          <div class="section-title">Select Date</div>
+          <div class="section-title">📅 Select Date</div>
           <div class="date-row">${datesHtml}</div>
           <div id="timeSlotSection" style="display:none">
-            <div class="section-title">Select Time Slot</div>
+            <div class="section-title">⏰ Select Time Slot</div>
             <div class="slots-grid" id="slotsGrid">
               ${TIME_SLOTS.map(s => `<button class="slot-btn" data-slot="${s}" onclick="window.selectSlot('${s}')">🕐 ${s}</button>`).join('')}
             </div>
           </div>
           <div id="summarySection" style="display:none">
-            <div class="summary-card">
+            <div class="summary-card glass">
               <div class="summary-title">📋 Appointment Summary</div>
-              <div class="summary-row"><span class="summary-label">Date</span><span class="summary-value" id="summaryDate">-</span></div>
-              <div class="summary-row"><span class="summary-label">Time</span><span class="summary-value" id="summaryTime">-</span></div>
-              <div class="summary-row"><span class="summary-label">Customer</span><span class="summary-value" id="summaryCust">${Store.get('custName', 'Customer')}</span></div>
+              <div class="summary-row"><span class="summary-label">📅 Date</span><span class="summary-value" id="summaryDate">-</span></div>
+              <div class="summary-row"><span class="summary-label">⏰ Time</span><span class="summary-value" id="summaryTime">-</span></div>
+              <div class="summary-row"><span class="summary-label">👤 Customer</span><span class="summary-value" id="summaryCust">${Store.get('custName', 'Customer')}</span></div>
             </div>
             <button class="btn btn-primary btn-block" style="margin:0 15px;width:calc(100% - 30px)" onclick="window.bookAppointment()">📅 Book Appointment →</button>
           </div>
@@ -86,10 +86,16 @@ Router.register('schedule', {
           document.getElementById('summarySection').style.display = 'block';
         };
 
-        window.bookAppointment = () => {
+        window.bookAppointment = async () => {
           if (!selectedDate || !selectedSlot) return;
-          const custLocation = Store.get('custLocation', '');
-          const custPincode = Store.get('custPincode', '');
+          let custLocation = Store.get('custLocation', '');
+          // Get GPS position for more accurate location
+          const pos = await getCurrentPositionOnce();
+          if (pos && pos.lat) {
+            custLocation = `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
+            Store.set('custLocation', custLocation);
+            try { firebase.database().ref('custLocation').set({ lat: pos.lat, lng: pos.lng }); } catch (e) {}
+          }
           const appointment = {
             customerName: custName,
             customerPhone: custPhone,
@@ -98,18 +104,18 @@ Router.register('schedule', {
             timeSlot: selectedSlot,
             status: 'scheduled',
             location: custLocation,
-            pincode: custPincode,
+            pincode: '',
             createdAt: Date.now(),
           };
           firebase.database().ref('appointments').push(appointment).then(ref => {
             Store.set('lastAppointmentId', ref.key);
-            // Also create an order (tech will see this in their Scheduled Appointments)
+            // Also create an order record
             const dateLabel = `${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}`;
             firebase.database().ref('orders').push({
               customerName: custName,
               customerPhone: custPhone,
               location: custLocation,
-              pincode: custPincode,
+              pincode: '',
               brand: 'Scheduled',
               repair: 'Appointment: ' + selectedSlot,
               status: 'scheduled',
@@ -118,7 +124,7 @@ Router.register('schedule', {
               isAppointment: true,
             });
             showAlert('✅ Appointment Booked!',
-              `Date: ${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}\nTime: ${selectedSlot}\n\nWe'll notify you when a technician is assigned.`,
+              `Date: ${DAYS[selectedDate.getDay()]}, ${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}\nTime: ${selectedSlot}\n\nWe'll notify you when your appointment is confirmed.`,
               [{ text: 'OK', onPress: () => Router.navigate('home') }]
             );
           }).catch(() => showAlert('Error', 'Failed to book appointment. Try again.'));

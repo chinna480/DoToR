@@ -186,29 +186,14 @@ function getCurrentPositionOnce() {
 const NavBar = {
   _customerTabs: [
     { id: 'home', label: 'Home', icon: '🏠', screen: 'home' },
-    { id: 'schedule', label: 'Schedule', icon: '📅', screen: 'schedule' },
+    { id: 'orders', label: 'Orders', icon: '📋', screen: 'schedule' },
     { id: 'download', label: 'App', icon: '📲', screen: null, action: 'download' },
-    { id: 'track', label: 'Track', icon: '🛵', screen: 'tracking' },
-    { id: 'chat', label: 'Chat', icon: '💬', screen: 'chat' },
+    { id: 'notifications', label: 'Alerts', icon: '🔔', screen: 'notifications' },
     { id: 'profile', label: 'Profile', icon: '👤', screen: 'customer-profile' },
-  ],
-  _techTabs: [
-    { id: 'home', label: 'Home', icon: '🏠', screen: 'tech-home' },
-    { id: 'jobs', label: 'Jobs', icon: '📋', screen: 'tech-home' },
-    { id: 'download', label: 'App', icon: '📲', screen: null, action: 'download' },
-    { id: 'track', label: 'Track', icon: '🛵', screen: 'tracking' },
-    { id: 'chat', label: 'Chat', icon: '💬', screen: 'chat' },
-    { id: 'profile', label: 'Profile', icon: '👤', screen: 'tech-profile' },
   ],
   visible: false,
 
-  get role() {
-    return Store.get('userRole', 'customer');
-  },
-
-  get tabs() {
-    return this.role === 'tech' ? this._techTabs : this._customerTabs;
-  },
+  get tabs() { return this._customerTabs; },
 
   show(screen) {
     const nav = document.getElementById('bottomNav');
@@ -216,7 +201,7 @@ const NavBar = {
     if (!nav) return;
 
     // Screens where nav should be hidden
-    const hiddenScreens = ['splash', 'role', 'customer-login', 'tech-login'];
+    const hiddenScreens = ['splash', 'customer-login'];
     if (hiddenScreens.includes(screen)) {
       nav.style.display = 'none';
       if (app) app.style.paddingBottom = '0';
@@ -235,19 +220,12 @@ const NavBar = {
     if (!container) return;
 
     container.innerHTML = this.tabs.map(tab => {
-      const isActive = this._isActive(tab, activeScreen);
+      const isActive = tab.screen === activeScreen;
       return `<button class="nav-item ${isActive ? 'active' : ''}" data-tab="${tab.id}" onclick="NavBar.onTabClick('${tab.id}')">
         <span class="nav-icon">${tab.icon}</span>
         <span class="nav-label">${tab.label}</span>
       </button>`;
     }).join('');
-  },
-
-  _isActive(tab, currentScreen) {
-    if (tab.screen === currentScreen) return true;
-    // Both Home and Jobs tabs point to tech-home
-    if (tab.screen === 'tech-home' && currentScreen === 'tech-home') return true;
-    return false;
   },
 
   onTabClick(tabId) {
@@ -256,18 +234,6 @@ const NavBar = {
 
     if (tab.action === 'download') {
       window.downloadApp();
-    } else if (tab.id === 'chat') {
-      const isTech = this.role === 'tech';
-      const orderId = isTech ? Store.get('currentOrderId', Store.get('lastOrderId', '')) : Store.get('lastOrderId', '');
-      const myName = Store.get(isTech ? 'techName' : 'custName', 'User');
-      Router.navigate('chat', {
-        orderId,
-        role: isTech ? 'tech' : 'cust',
-        [isTech ? 'techName' : 'customerName']: myName,
-        [isTech ? 'customerName' : 'techName']: 'Technician'
-      }).catch(function(e) {
-        console.warn('Nav chat error:', e);
-      });
     } else if (tab.screen) {
       Router.navigate(tab.screen).catch(function(e) {
         console.warn('Nav navigate error:', e);
@@ -275,23 +241,6 @@ const NavBar = {
     }
   }
 };
-
-// ─── Dark Mode Toggle ────────────────────────────────────
-function toggleDarkMode() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const newTheme = isDark ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  Store.set('theme', newTheme);
-  return newTheme === 'dark';
-}
-
-function initTheme() {
-  const theme = Store.get('theme', 'light');
-  document.documentElement.setAttribute('data-theme', theme);
-}
-
-// Initialize theme early
-initTheme();
 
 // ─── Download App Banner ─────────────────────────────────────
 window.downloadApp = () => {

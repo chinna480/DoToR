@@ -1,9 +1,8 @@
-// Customer Profile Screen
+// Customer Profile Screen - Bento Glass
 Router.register('customer-profile', {
   render() {
     const name = Store.get('custName', 'Customer');
     const phone = Store.get('custPhone', '');
-    const email = Store.get('custEmail', '');
     const location = Store.get('custLocation', '');
     const pincode = Store.get('custPincode', '');
     const photo = Store.get('custPhoto', null);
@@ -29,12 +28,11 @@ Router.register('customer-profile', {
       { icon: '⚙️', label: 'Settings', sub: null },
       { icon: '📄', label: 'Privacy Policy', sub: null },
       { icon: '📜', label: 'Terms of Service', sub: null },
-      { icon: '🌙', label: 'Dark Mode', sub: null, toggle: true, id: 'darkMode' },
       { icon: '🚪', label: 'Logout', sub: null, danger: true },
     ];
 
     const menuHtml = MENU.map((item, i) => `
-      <div class="menu-item" onclick="${item.toggle && item.id !== 'darkMode' ? 'event.preventDefault()' : item.danger ? 'window.custLogout()' : 'window.custMenuAction(\'' + item.label + '\')'}">
+      <div class="menu-item" onclick="${item.toggle ? 'event.preventDefault()' : item.danger ? 'window.custLogout()' : 'window.custMenuAction(\'' + item.label + '\')'}">
         <div class="menu-left">
           <div class="menu-icon-box ${item.danger ? 'menu-icon-danger' : ''}">
             <span class="menu-icon-emoji">${item.icon}</span>
@@ -45,7 +43,7 @@ Router.register('customer-profile', {
           </div>
         </div>
         ${item.toggle
-          ? `<button class="toggle on" data-id="${item.id || ''}" onclick="event.stopPropagation();${item.id === 'darkMode' ? 'window.toggleDarkMode();' : ''}this.classList.toggle('on')"><div class="toggle-knob"></div></button>`
+          ? `<button class="toggle on" onclick="event.stopPropagation();this.classList.toggle('on')"><div class="toggle-knob"></div></button>`
           : `<span class="menu-chevron ${item.danger ? 'menu-chevron-danger' : ''}">›</span>`
         }
       </div>
@@ -54,12 +52,15 @@ Router.register('customer-profile', {
     return {
       html: `
         <div class="screen">
-          <div class="profile-header">
-            <button class="header-back" onclick="Router.navigate('home')" style="color:var(--dark)">←</button>
-            <span class="header-title" style="color:#111">My Profile</span>
+          <!-- Glass Profile Header -->
+          <div class="profile-header glass-strong">
+            <button class="header-back" onclick="Router.navigate('home')">←</button>
+            <span class="header-title">👤 My Profile</span>
             <div style="width:40px"></div>
           </div>
-          <div class="profile-card">
+          
+          <!-- Profile Card -->
+          <div class="profile-card glass">
             <div class="profile-row">
               <div class="profile-photo-wrap">
                 ${photoHtml}
@@ -68,7 +69,6 @@ Router.register('customer-profile', {
               <div class="profile-info">
                 <div class="profile-name-text">${name}</div>
                 <div class="profile-phone-text">${phone ? '+91 ' + phone : 'Add phone number'}</div>
-                ${email ? `<div class="profile-sub-text">${email}</div>` : ''}
                 ${location ? `<div class="profile-sub-text">📍 ${location}</div>` : ''}
                 ${pincode ? `<div class="profile-sub-text">📮 ${pincode}</div>` : ''}
               </div>
@@ -76,17 +76,22 @@ Router.register('customer-profile', {
             <div class="profile-divider"></div>
             <div class="profile-rating-row">
               <span class="profile-star-icon">⭐</span>
-              <span class="profile-rating-text">${rating} My Rating</span>
+              <span class="profile-rating-text">${rating} — My Rating</span>
             </div>
           </div>
+
+          <!-- Stats Row -->
           <div class="stats-row-profile">
-            <div class="stat-card"><div class="stat-number" id="custTotalOrders">${totalOrders}</div><div class="stat-label-small">My Orders</div></div>
-            <div class="stat-card"><div class="stat-number" id="custCompleted">${completedOrders}</div><div class="stat-label-small">Completed</div></div>
-            <div class="stat-card"><div class="stat-number" id="custPending">${totalOrders - completedOrders}</div><div class="stat-label-small">Pending</div></div>
+            <div class="stat-card glass"><div class="stat-number" id="custTotalOrders">${totalOrders}</div><div class="stat-label-small">📋 Orders</div></div>
+            <div class="stat-card glass"><div class="stat-number" id="custCompleted">${completedOrders}</div><div class="stat-label-small">✅ Done</div></div>
+            <div class="stat-card glass"><div class="stat-number" id="custPending">${totalOrders - completedOrders}</div><div class="stat-label-small">⏳ Active</div></div>
           </div>
-          <div class="menu-card">${menuHtml}</div>
+
+          <!-- Menu Card -->
+          <div class="menu-card glass">${menuHtml}</div>
+          
           <div class="version-footer">
-            <div class="version-app">🔧 DoToR v1.0.0</div>
+            <div class="version-app">🔧 DoToR <span style="color:var(--primary);font-weight:900">v1.0.0</span></div>
             <div class="version-tag">We are the Doctor of your Device</div>
           </div>
           <div style="height:40px"></div>
@@ -144,24 +149,14 @@ Router.register('customer-profile', {
             'Settings': () => showAlert('Settings', 'Coming Soon!'),
             'Privacy Policy': () => showAlert('Privacy', 'Your data is secure!'),
             'Terms of Service': () => showAlert('Terms', 'Use DoToR responsibly!'),
-            'Dark Mode': () => {
-              const isNowDark = toggleDarkMode();
-              const toggle = document.querySelector('.toggle[data-id="darkMode"]');
-              if (toggle) toggle.classList.toggle('on', isNowDark);
-            },
           };
           if (actions[label]) actions[label]();
         };
 
-        // Initialize dark mode toggle state
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const darkToggle = document.querySelector('.toggle[data-id="darkMode"]');
-        if (darkToggle) darkToggle.classList.toggle('on', isDark);
-
         window.custLogout = () => {
           showAlert('Logout?', 'Are you sure you want to logout?', [
             { text: 'Cancel' },
-            { text: 'Logout', style: 'destructive', onPress: () => { Store.clear(); Router.navigate('role'); } }
+            { text: 'Logout', style: 'destructive', onPress: () => { Store.clear(); Router.navigate('customer-login'); } }
           ]);
         };
 
